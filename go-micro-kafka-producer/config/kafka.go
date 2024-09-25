@@ -1,6 +1,12 @@
 package config
 
-import "github.com/IBM/sarama"
+import (
+	"fmt"
+	"time"
+
+	"github.com/IBM/sarama"
+	"github.com/rs/zerolog/log"
+)
 
 func ConnectProducer(brokersUrl []string) (sarama.SyncProducer, error) {
 
@@ -15,4 +21,18 @@ func ConnectProducer(brokersUrl []string) (sarama.SyncProducer, error) {
 	}
 
 	return conn, nil
+}
+
+// Retry logic for connecting to Kafka
+func RetryKafkaConnection(brokersUrl []string, maxRetries int, retryInterval time.Duration) (producer sarama.SyncProducer, err error) {
+	for i := 0; i < maxRetries; i++ {
+		producer, err = ConnectProducer(brokersUrl)
+		if err == nil {
+			return producer, nil
+		}
+		log.Warn().Msgf("Kafka connection failed. Retry %d/%d", i+1, maxRetries)
+		time.Sleep(retryInterval) // Wait before retrying
+	}
+
+	return nil, fmt.Errorf("failed to connect to Kafka after %d retries: %v", maxRetries, err)
 }
