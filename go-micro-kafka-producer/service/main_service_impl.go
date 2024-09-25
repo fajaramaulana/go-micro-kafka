@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/config"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/model/response"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/repository"
+	"github.com/rs/zerolog/log"
 )
 
 func NewMainService(configuration *config.Config, mainRepository *repository.MainRepository) MainService {
@@ -28,15 +28,15 @@ func (s *mainServiceImpl) PublishQueueMain() {
 	// get data from repository
 	data, err := s.MainRepository.GetData()
 	if err != nil {
-		fmt.Println(err)
+		log.Error().Msg("Failed to get data")
 	}
 
 	t := time.Now()
 	location, err := time.LoadLocation("Asia/Jakarta")
 	if err != nil {
-		fmt.Println(err)
+		log.Error().Msg("Failed to load location")
 	}
-	fmt.Println("Time: ", t.In(location), "Total Data: ", len(data.Data))
+	log.Info().Msgf("Time: %s Total Data: %d", t.In(location), len(data.Data))
 	if len(data.Data) > 0 {
 		chunkSize, err := strconv.Atoi(s.Configuration.Get("SYSTEM_CHUNK_QUEUE"))
 		if err != nil {
@@ -47,15 +47,17 @@ func (s *mainServiceImpl) PublishQueueMain() {
 		for _, chunk := range chunkedData {
 			message, err := json.Marshal(chunk)
 			if err != nil {
-				fmt.Println(err)
+				log.Error().Msg("Failed to connect to Kafka.")
 			}
 
 			brokersUrl := []string{s.Configuration.Get("KAFKA_URL")}
-			producer, err := config.ConnectProducer(brokersUrl)
+			producer, err := config.RetryKafkaConnection(brokersUrl, 3, 1*time.Minute)
 			if err != nil {
-				fmt.Println(err)
+				log.Error().Msg("Failed to connect to Kafka after retries.")
+				return
 			}
 
+			// Ensure the producer is closed only if it was successfully created
 			defer producer.Close()
 
 			msg := &sarama.ProducerMessage{
@@ -65,13 +67,13 @@ func (s *mainServiceImpl) PublishQueueMain() {
 
 			partition, offset, err := producer.SendMessage(msg)
 			if err != nil {
-				fmt.Println(err)
+				log.Error().Msgf("Failed to send message: %v", err)
 			}
 
-			fmt.Printf("Message size %d/%d is stored in topic(%s)/partition(%d)/offset(%d)\n", len(chunk), len(data.Data), s.Configuration.Get("KAFKA_TOPIC"), partition, offset)
+			log.Info().Msgf("Message size %d/%d is stored in topic(%s)/partition(%d)/offset(%d)", len(chunk), len(data.Data), s.Configuration.Get("KAFKA_TOPIC"), partition, offset)
 		}
 	} else {
-		fmt.Println("Data is empty")
+		log.Info().Msg("Data is empty")
 	}
 }
 
