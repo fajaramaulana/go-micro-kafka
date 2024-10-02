@@ -9,7 +9,6 @@ import (
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/controller"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/repository"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/service"
-
 	"github.com/robfig/cron"
 
 	"github.com/rs/zerolog"
@@ -29,14 +28,15 @@ func main() {
 	// setup controller
 	mainController := controller.NewMainController(&mainService)
 	// checking if kafka is connected
-	/* brokersUrl := []string{configuration.Get("KAFKA_URL")}
+	brokersUrl := []string{configuration.Get("KAFKA_URL")}
 	producer, err := config.ConnectProducer(brokersUrl)
 	if err != nil {
 		log.Error().Msg("Failed to connect to Kafka")
 		os.Exit(1)
 	}
-	defer producer.Close() */
-
+	defer producer.Close()
+	log.Info().Msg("Kafka connected")
+	log.Info().Msg("Starting Cron Job")
 	// Initialize cron schedulers
 	c := cron.New()
 	// Cron job

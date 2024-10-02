@@ -45,9 +45,23 @@ func (s *mainServiceImpl) PublishQueueMain() {
 
 		chunkedData := chunkData(data.Data, chunkSize)
 		for _, chunk := range chunkedData {
-			message, err := json.Marshal(chunk)
+
+			mesData := response.GetData{
+				Status:  true,
+				Message: "Sukses",
+				Time:    time.Now().String(),
+				Data:    chunk,
+			}
+			message, err := json.Marshal(mesData)
 			if err != nil {
 				log.Error().Msg("Failed to connect to Kafka.")
+			}
+
+			var dataDetail response.DataDetail
+
+			err = json.Unmarshal(message, &dataDetail)
+			if err != nil {
+				log.Fatal().Msg("Failed to unmarshal data")
 			}
 
 			brokersUrl := []string{s.Configuration.Get("KAFKA_URL")}
@@ -61,7 +75,7 @@ func (s *mainServiceImpl) PublishQueueMain() {
 			defer producer.Close()
 
 			msg := &sarama.ProducerMessage{
-				Topic: s.Configuration.Get("KAFKA_TOPIC"),
+				Topic: s.Configuration.Get("KAFKA_TOPIC_MAIN"),
 				Value: sarama.StringEncoder(message),
 			}
 
