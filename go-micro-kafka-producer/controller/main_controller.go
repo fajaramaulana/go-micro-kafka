@@ -1,15 +1,19 @@
 package controller
 
-import "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/service"
+import (
+	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/service"
+)
 
 type MainController struct {
-	MainService service.MainService
+	Service service.MainService
 }
 
-func NewMainController(mainService *service.MainService) MainController {
-	return MainController{MainService: *mainService}
+// NewMainController creates a new MainController
+func NewMainController(service service.MainService) *MainController {
+	return &MainController{Service: service}
 }
 
+// PublishMessageMain publishes the main message to Kafka
 func (controller *MainController) PublishMessageMain() {
-	controller.MainService.PublishQueueMain()
+
 }
