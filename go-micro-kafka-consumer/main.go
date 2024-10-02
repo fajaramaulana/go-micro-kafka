@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/signal"
@@ -32,16 +33,12 @@ func main() {
 	kafkaConfig := config.GetKafkaConfig("", "")
 	kafkaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest // Start from the earliest offset
 
-	// Create Kafka consumer
-	consumers, err := sarama.NewConsumer([]string{configuration.Get("KAFKA_URL")}, kafkaConfig)
+	// Create Kafka consumer group
+	consumerGroup, err := sarama.NewConsumerGroup([]string{configuration.Get("KAFKA_URL")}, configuration.Get("KAFKA_GROUP"), kafkaConfig)
 	if err != nil {
-		log.Fatal().Msgf("Error creating Kafka consumer: %v", err)
+		log.Fatal().Msgf("Error creating Kafka consumer group: %v", err)
 	}
-	defer func() {
-		if err := consumers.Close(); err != nil {
-			log.Fatal().Msgf("Failed to close Kafka consumer: %v", err)
-		}
-	}()
+	defer consumerGroup.Close()
 
 	// Set up repository and service
 	mainRepository := repository.NewMainRepository(&configuration)
@@ -51,65 +48,25 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
-	// Get Kafka topic and partitions
-	topicPbk := []string{configuration.Get("KAFKA_TOPIC_MAIN")}
-	chanMessagePbk := make(chan *sarama.ConsumerMessage, 256)
-
-	// Consume messages from each partition
-	for _, topic := range topicPbk {
-		partitionList, err := consumers.Partitions(topic)
-		if err != nil {
-			log.Printf("Unable to get partitions for topic %s: %v", topic, err)
-			continue
-		}
-
-		for _, partition := range partitionList {
-			go consumeMessages(consumers, topic, partition, chanMessagePbk)
-		}
+	// Start consuming
+	consumer := &ConsumerClaimPbk{
+		mainService: mainService,
+		ready:       make(chan bool),
 	}
 
 	log.Info().Msg("Kafka consumer waiting for messages...")
 
-ConsumerLoop:
-	for {
-		select {
-		case msg := <-chanMessagePbk:
-			log.Info().Msgf("New Message from kafka, message: %v", string(msg.Value))
-
-			var response request.DataFromKafka
-			err := json.Unmarshal(msg.Value, &response)
-			if err != nil {
-				log.Error().Msgf("Error unmarshalling message: %v", err)
-				continue
+	go func() {
+		for {
+			if err := consumerGroup.Consume(context.Background(), []string{configuration.Get("KAFKA_TOPIC_MAIN")}, consumer); err != nil {
+				log.Error().Msgf("Error from consumer: %v", err)
 			}
-
-			t := time.Now()
-			location, err := time.LoadLocation("Asia/Jakarta")
-			if err != nil {
-				log.Error().Msgf("Error loading location: %v", err)
-			}
-
-			log.Info().Msgf("Time: %v Total Data: %v", t.In(location), len(response.Data))
-			mainService.MainFuncService(response.Data)
-
-		case sig := <-signals:
-			log.Info().Msgf("Received signal: %v. Shutting down...", sig)
-			break ConsumerLoop
+			consumer.ready = make(chan bool) // Re-initialize for the next loop
 		}
-	}
-}
+	}()
 
-func consumeMessages(consumer sarama.Consumer, topic string, partition int32, ch chan<- *sarama.ConsumerMessage) {
-	partitionConsumer, err := consumer.ConsumePartition(topic, partition, sarama.OffsetOldest)
-	if err != nil {
-		log.Info().Msgf("Error starting partition consumer for topic %s, partition %d: %v", topic, partition, err)
-		return
-	}
-	defer partitionConsumer.Close()
-
-	for msg := range partitionConsumer.Messages() {
-		ch <- msg
-	}
+	<-signals // Wait for signal to exit
+	log.Info().Msg("Shutting down Kafka consumer...")
 }
 
 func (consumer *ConsumerClaimPbk) Setup(sarama.ConsumerGroupSession) error {
@@ -121,29 +78,28 @@ func (consumer *ConsumerClaimPbk) Cleanup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
-func (consumer *ConsumerClaimPbk) ConsumeClaim(session sarama.ConsumerGroupSession, mainFunc sarama.ConsumerGroupClaim) error {
-	for {
-		select {
-		case message := <-mainFunc.Messages():
-			var request []request.DataDetail
-			json.Unmarshal([]byte(string(message.Value)), &request)
-			log.Info().Msgf("New Message from kafka, message Pengiriman Bukti Kepeserataan: %v", string(message.Value))
-			consumer.mainService.MainFuncService(request)
-			session.MarkMessage(message, "")
-		case <-session.Context().Done():
-			return nil
+func (consumer *ConsumerClaimPbk) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	for msg := range claim.Messages() {
+		log.Info().Msgf("New Message from kafka, message: %v", string(msg.Value))
+
+		var response request.DataFromKafka
+		err := json.Unmarshal(msg.Value, &response)
+		if err != nil {
+			log.Error().Msgf("Error unmarshalling message: %v", err)
+			continue
 		}
-	}
-}
 
-func toggleConsumptionFlow(client sarama.ConsumerGroup, isPaused *bool) {
-	if *isPaused {
-		client.ResumeAll()
-		log.Info().Msg("Resuming consumption")
-	} else {
-		client.PauseAll()
-		log.Info().Msg("Pausing consumption")
-	}
+		t := time.Now()
+		location, err := time.LoadLocation("Asia/Jakarta")
+		if err != nil {
+			log.Error().Msgf("Error loading location: %v", err)
+		}
 
-	*isPaused = !*isPaused
+		log.Info().Msgf("Time: %v Total Data: %v", t.In(location), len(response.Data))
+		consumer.mainService.MainFuncService(response.Data)
+
+		// Commit the offset only after successful processing
+		session.MarkMessage(msg, "")
+	}
+	return nil
 }
