@@ -7,7 +7,7 @@ import (
 
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/config"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/controller"
-	kafkaconfig "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/kafka"
+	kafkaconfig "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/kafkaconfig"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/repository"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/service"
 	"github.com/robfig/cron"
@@ -22,8 +22,8 @@ func main() {
 
 	// Try to connect with retries
 	brokersUrl := []string{configuration.Get("KAFKA_URL")}
-	maxRetries := 5                  // Number of retry attempts
-	retryInterval := 5 * time.Second // Start retry interval
+	maxRetries := 5                   // Number of retry attempts
+	retryInterval := 30 * time.Second // Start retry interval
 	producer, err := config.RetryKafkaConnection(brokersUrl, maxRetries, retryInterval)
 	if err != nil {
 		log.Error().Msg("Failed to connect to Kafka after multiple retries")

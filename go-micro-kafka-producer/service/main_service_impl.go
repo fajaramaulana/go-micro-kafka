@@ -7,7 +7,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/config"
-	kafkaconfig "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/kafka"
+	kafkaconfig "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/kafkaconfig"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/model/response"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/repository"
 	"github.com/rs/zerolog/log"
