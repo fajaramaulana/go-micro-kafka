@@ -40,7 +40,7 @@ func main() {
 	mainRepository := repository.NewMainRepository()
 
 	// initialize service with kafka producer
-	mainService := service.NewMainService(&configuration, kafkaProducer, &mainRepository)
+	mainService := service.NewMainService(&configuration, kafkaProducer, mainRepository)
 	// Initialize controller with Kafka producer
 	mainController := controller.NewMainController(mainService)
 

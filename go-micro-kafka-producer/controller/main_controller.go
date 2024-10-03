@@ -15,5 +15,5 @@ func NewMainController(service service.MainService) *MainController {
 
 // PublishMessageMain publishes the main message to Kafka
 func (controller *MainController) PublishMessageMain() {
-
+	controller.Service.PublishQueueMain()
 }

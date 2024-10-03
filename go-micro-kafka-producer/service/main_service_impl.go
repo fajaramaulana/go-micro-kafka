@@ -2,10 +2,10 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/IBM/sarama"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/config"
 	kafkaconfig "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/kafkaconfig"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/model/response"
@@ -19,11 +19,11 @@ type mainServiceImpl struct {
 	Repository    repository.MainRepository
 }
 
-func NewMainService(configuration *config.Config, producer kafkaconfig.KafkaProducer, repository *repository.MainRepository) MainService {
+func NewMainService(configuration *config.Config, producer kafkaconfig.KafkaProducer, repository repository.MainRepository) MainService {
 	return &mainServiceImpl{
 		Configuration: *configuration,
 		Producer:      producer,
-		Repository:    *repository,
+		Repository:    repository,
 	}
 }
 
@@ -32,6 +32,13 @@ func (s *mainServiceImpl) PublishQueueMain() {
 	data, err := s.Repository.GetData()
 	if err != nil {
 		log.Error().Msg("Failed to get data")
+		return
+	}
+	fmt.Printf("%# v\n", data)
+
+	// Check if data is nil
+	if data == nil {
+		log.Error().Msg("No data retrieved from repository")
 		return
 	}
 
@@ -50,7 +57,7 @@ func (s *mainServiceImpl) PublishQueueMain() {
 		if err != nil {
 			chunkSize = 20
 		}
-		chunkedData := chunkData(data.Data, chunkSize)
+		chunkedData := ChunkData(data.Data, chunkSize)
 
 		// Loop through chunks and send messages
 		for _, chunk := range chunkedData {
@@ -68,7 +75,7 @@ func (s *mainServiceImpl) PublishQueueMain() {
 			}
 
 			// Send message via Kafka
-			err = s.sendMessageToKafka(message)
+			err = s.SendMessageToKafka(s.Producer, message)
 			if err != nil {
 				log.Error().Msgf("Failed to send message: %v", err)
 			}
@@ -79,30 +86,18 @@ func (s *mainServiceImpl) PublishQueueMain() {
 }
 
 // Private helper function to send message to Kafka
-func (s *mainServiceImpl) sendMessageToKafka(message []byte) error {
-	brokersUrl := []string{s.Configuration.Get("KAFKA_URL")}
-	producer, err := config.RetryKafkaConnection(brokersUrl, 3, 1*time.Minute)
+func (s *mainServiceImpl) SendMessageToKafka(producer kafkaconfig.KafkaProducer, message []byte) error {
+	topic := s.Configuration.Get("KAFKA_TOPIC_MAIN")
+	err := producer.SendMessage(topic, message)
 	if err != nil {
-		log.Error().Msg("Failed to connect to Kafka after retries.")
-		return err
+		log.Error().Msgf("Failed to send message: %v", err)
+	} else {
+		log.Info().Msgf("Message sent to topic %s successfully", topic)
 	}
-	defer producer.Close()
-
-	msg := &sarama.ProducerMessage{
-		Topic: s.Configuration.Get("KAFKA_TOPIC_MAIN"),
-		Value: sarama.StringEncoder(message),
-	}
-
-	partition, offset, err := producer.SendMessage(msg)
-	if err != nil {
-		return err
-	}
-
-	log.Info().Msgf("Message is stored in topic(%s)/partition(%d)/offset(%d)", s.Configuration.Get("KAFKA_TOPIC_MAIN"), partition, offset)
-	return nil
+	return err
 }
 
-func chunkData(data []response.DataDetail, chunkSize int) [][]response.DataDetail {
+func ChunkData(data []response.DataDetail, chunkSize int) [][]response.DataDetail {
 	var chunks [][]response.DataDetail
 
 	numChunks := (len(data) + chunkSize - 1) / chunkSize
