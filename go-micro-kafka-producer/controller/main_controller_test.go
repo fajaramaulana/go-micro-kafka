@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/controller"
-	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/service"
+	kafkaconfigmock "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/mock"
 )
 
 func TestPublishMessageMain(t *testing.T) {
 	// Arrange: Set up a mock MainService
-	mockService := new(service.MockMainService)
+	mockService := new(kafkaconfigmock.MockMainService)
 	controller := controller.NewMainController(mockService)
 
 	// Expect the PublishQueueMain method to be called

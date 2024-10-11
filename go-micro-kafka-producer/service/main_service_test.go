@@ -7,9 +7,8 @@ import (
 	"time"
 
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/config"
-	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/kafkaconfig"
+	kafkaconfigmock "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/mock"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/model/response"
-	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/repository"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/service"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -18,8 +17,8 @@ import (
 
 func TestPublishQueueMain(t *testing.T) {
 	// Arrange: Set up mocks for KafkaProducer and MainRepository
-	mockKafkaProducer := new(kafkaconfig.MockKafkaProducer)
-	mockRepository := new(repository.MockMainRepository)
+	mockKafkaProducer := new(kafkaconfigmock.MockKafkaProducer)
+	mockRepository := new(kafkaconfigmock.MockMainRepository)
 	configuration := config.New("../.env") // Mock or use real config if needed
 
 	// Create a sample data response for the test
@@ -54,8 +53,8 @@ func TestPublishQueueMain(t *testing.T) {
 }
 
 func TestPublishQueueMain_NilData(t *testing.T) {
-	mockKafkaProducer := new(kafkaconfig.MockKafkaProducer)
-	mockRepository := new(repository.MockMainRepository)
+	mockKafkaProducer := new(kafkaconfigmock.MockKafkaProducer)
+	mockRepository := new(kafkaconfigmock.MockMainRepository)
 	configuration := config.New("../.env") // Mock or use real config if needed
 
 	// Mock repository to return nil data
@@ -74,8 +73,8 @@ func TestPublishQueueMain_NilData(t *testing.T) {
 
 func TestPublishQueueMain_ErrorInRepository(t *testing.T) {
 
-	mockKafkaProducer := new(kafkaconfig.MockKafkaProducer)
-	mockRepository := new(repository.MockMainRepository)
+	mockKafkaProducer := new(kafkaconfigmock.MockKafkaProducer)
+	mockRepository := new(kafkaconfigmock.MockMainRepository)
 	configuration := config.New("../.env") // Mock or use real config if needed
 
 	// Set up mock repository to return an error
@@ -92,8 +91,8 @@ func TestPublishQueueMain_ErrorInRepository(t *testing.T) {
 
 func TestPublishQueueMain_ErrorInKafkaProducer(t *testing.T) {
 
-	mockKafkaProducer := new(kafkaconfig.MockKafkaProducer)
-	mockRepository := new(repository.MockMainRepository)
+	mockKafkaProducer := new(kafkaconfigmock.MockKafkaProducer)
+	mockRepository := new(kafkaconfigmock.MockMainRepository)
 	configuration := config.New("../.env") // Mock or use real config if needed
 
 	// Create a sample data response for the test
@@ -123,8 +122,8 @@ func TestPublishQueueMain_ErrorInKafkaProducer(t *testing.T) {
 }
 
 func TestPublishQueueMain_ErrorInSendingMessage(t *testing.T) {
-	mockKafkaProducer := new(kafkaconfig.MockKafkaProducer)
-	mockRepository := new(repository.MockMainRepository)
+	mockKafkaProducer := new(kafkaconfigmock.MockKafkaProducer)
+	mockRepository := new(kafkaconfigmock.MockMainRepository)
 	configuration := config.New("../.env") // Mock or use real config if needed
 
 	// Set up mock data
@@ -156,7 +155,7 @@ func TestPublishQueueMain_ErrorInSendingMessage(t *testing.T) {
 
 func TestSendMessageToKafka_Success(t *testing.T) {
 	// Arrange: Set up mock producer and configuration
-	mockKafkaProducer := new(kafkaconfig.MockKafkaProducer)
+	mockKafkaProducer := new(kafkaconfigmock.MockKafkaProducer)
 	configuration := config.New("../.env") // Mock or use real config if needed
 
 	// Create the service with the mock config and repository
@@ -178,7 +177,7 @@ func TestSendMessageToKafka_Success(t *testing.T) {
 
 func TestSendMessageToKafka_Failure(t *testing.T) {
 	// Arrange: Set up mock producer and configuration
-	mockKafkaProducer := new(kafkaconfig.MockKafkaProducer)
+	mockKafkaProducer := new(kafkaconfigmock.MockKafkaProducer)
 	configuration := config.New("../.env") // Mock or use real config if needed
 
 	// Create the service with the mock config and repository
@@ -198,6 +197,69 @@ func TestSendMessageToKafka_Failure(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, mockError, err)
 	mockKafkaProducer.AssertCalled(t, "SendMessage", topic, message)
+}
+
+func TestSendMessageToKafka_NilMessage(t *testing.T) {
+	// Create a new instance of the mock Kafka producer
+	mockKafkaProducer := new(kafkaconfigmock.MockKafkaProducer)
+
+	// Load your configuration
+	configuration := config.New("../.env")
+
+	// Create a new MainService instance
+	mainService := service.NewMainService(&configuration, mockKafkaProducer, nil)
+
+	// Define what should happen when SendMessage is called with a nil message
+	mockKafkaProducer.On("SendMessage", "main_topic", mock.Anything).Return(errors.New("send error"))
+
+	// Call the method under test
+	err := mainService.SendMessageToKafka(mockKafkaProducer, nil)
+
+	// Assert that the error is as expected
+	assert.Error(t, err)                    // Expecting an error for nil message
+	mockKafkaProducer.AssertExpectations(t) // Ensure all expectations were met
+}
+
+func TestSendMessageToKafka(t *testing.T) {
+	// Create a new instance of the mock MainService
+	mockService := new(kafkaconfigmock.MockMainService)
+
+	// Create a mock producer (adjust this as per your actual producer mock)
+	mockProducer := new(kafkaconfigmock.MockKafkaProducer) // Assuming you have a KafkaProducer mock
+
+	tests := []struct {
+		name    string
+		message []byte
+		wantErr bool
+	}{
+		{"Valid message", []byte("Test message"), false},
+		{"Nil message", nil, true},
+		{"Empty message", []byte(""), true}, // Expecting no error for empty message
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the expected call based on the test case
+			if tt.wantErr {
+				mockService.On("SendMessageToKafka", mockProducer, mock.Anything).Return(errors.New("send error"))
+			} else {
+				mockService.On("SendMessageToKafka", mockProducer, tt.message).Return(nil) // Expecting nil for empty message
+			}
+
+			// Call the method under test
+			err := mockService.SendMessageToKafka(mockProducer, tt.message)
+
+			// Check the error
+			if tt.wantErr {
+				assert.Error(t, err) // Expecting an error for nil message
+			} else {
+				assert.NoError(t, err) // Expecting no error for valid and empty messages
+			}
+
+			// Assert that the expectations were met
+			mockService.AssertExpectations(t)
+		})
+	}
 }
 
 func TestChunkData(t *testing.T) {
