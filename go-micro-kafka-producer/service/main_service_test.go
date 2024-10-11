@@ -15,6 +15,19 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// test failed get data from .env
+func TestNew_ConfigFileNotFound(t *testing.T) {
+	// Defer a function that recovers from panic
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Expected panic but did not get one")
+		}
+	}()
+
+	// Call the function that should panic
+	config.New("./non_existing_env_file.env") // Provide a path that doesn't exist
+}
+
 func TestPublishQueueMain(t *testing.T) {
 	// Arrange: Set up mocks for KafkaProducer and MainRepository
 	mockKafkaProducer := new(kafkaconfigmock.MockKafkaProducer)

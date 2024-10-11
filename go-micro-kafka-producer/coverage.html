@@ -65,7 +65,7 @@
 				
 				<option value="file4">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/exception/database_error.go (0.0%)</option>
 				
-				<option value="file5">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/exception/error.go (50.0%)</option>
+				<option value="file5">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/exception/error.go (100.0%)</option>
 				
 				<option value="file6">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/exception/error_handler.go (0.0%)</option>
 				
@@ -217,7 +217,7 @@ func (databaseError DatabaseError) Error() string <span class="cov0" title="0">{
 		<pre class="file" id="file5" style="display: none">package exception
 
 func PanicIfNeeded(err interface{}) <span class="cov8" title="1">{
-        if err != nil </span><span class="cov0" title="0">{
+        if err != nil </span><span class="cov8" title="1">{
                 panic(err)</span>
         }
 }
