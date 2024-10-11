@@ -81,7 +81,7 @@
 				
 				<option value="file12">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/mock/mock_main_service.go (100.0%)</option>
 				
-				<option value="file13">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/repository/main_repository_impl.go (0.0%)</option>
+				<option value="file13">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/repository/main_repository_impl.go (100.0%)</option>
 				
 				<option value="file14">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/service/main_service_impl.go (86.7%)</option>
 				
@@ -444,19 +444,19 @@ import (
         "github.com/google/uuid"
 )
 
-func NewMainRepository() MainRepository <span class="cov0" title="0">{
+func NewMainRepository() MainRepository <span class="cov8" title="1">{
         return &amp;mainRepositoryImpl{}
 }</span>
 
 type mainRepositoryImpl struct {
 }
 
-func (m *mainRepositoryImpl) GetData() (*response.GetData, error) <span class="cov0" title="0">{
+func (m *mainRepositoryImpl) GetData() (*response.GetData, error) <span class="cov8" title="1">{
         // data detail
 
         count := 5
         dataDetail := []response.DataDetail{}
-        for i := 0; i &lt; count; i++ </span><span class="cov0" title="0">{
+        for i := 0; i &lt; count; i++ </span><span class="cov8" title="1">{
                 dataDetail = append(dataDetail, response.DataDetail{
                         Uuid: uuid.New().String(),
                         Name: "Name " + strconv.Itoa(i),
@@ -464,7 +464,7 @@ func (m *mainRepositoryImpl) GetData() (*response.GetData, error) <span class="c
                 })
         }</span>
 
-        <span class="cov0" title="0">retData := response.GetData{
+        <span class="cov8" title="1">retData := response.GetData{
                 Message: "Hello World",
                 Status:  true,
                 Time:    "2024-09-24",
