@@ -68,7 +68,7 @@ bash
 Copy code
 
 ```bash 
-go test ./...` 
+go test ./...
 ```
 ## 🔍 Contributing
 
