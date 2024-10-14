@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/config/config.go (100.0%)</option>
 				
-				<option value="file1">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/config/kafka.go (0.0%)</option>
+				<option value="file1">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/config/kafka.go (51.9%)</option>
 				
 				<option value="file2">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/controller/main_controller.go (100.0%)</option>
 				
@@ -73,7 +73,7 @@
 				
 				<option value="file8">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/kafkaconfig/kafka_producer_impl.go (100.0%)</option>
 				
-				<option value="file9">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/main.go (0.0%)</option>
+				<option value="file9">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/main.go (41.2%)</option>
 				
 				<option value="file10">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/mock/mock_kafka_producer.go (100.0%)</option>
 				
@@ -108,6 +108,7 @@ import (
 
 type Config interface {
         Get(key string) string
+        Set(key, value string)
 }
 
 type configImpl struct {
@@ -115,6 +116,10 @@ type configImpl struct {
 
 func (config *configImpl) Get(key string) string <span class="cov8" title="1">{
         return os.Getenv(key)
+}</span>
+
+func (config *configImpl) Set(key, value string) <span class="cov8" title="1">{
+        os.Setenv(key, value)
 }</span>
 
 func New(filenames ...string) Config <span class="cov8" title="1">{
@@ -127,13 +132,14 @@ func New(filenames ...string) Config <span class="cov8" title="1">{
 		<pre class="file" id="file1" style="display: none">package config
 
 import (
+        "errors"
         "time"
 
         "github.com/IBM/sarama"
         "github.com/rs/zerolog/log"
 )
 
-func ConnectProducer(brokersUrl []string) (sarama.SyncProducer, error) <span class="cov0" title="0">{
+func ConnectProducer(brokersUrl []string) (sarama.SyncProducer, error) <span class="cov8" title="1">{
 
         config := sarama.NewConfig()
         config.Producer.Return.Successes = true
@@ -145,18 +151,18 @@ func ConnectProducer(brokersUrl []string) (sarama.SyncProducer, error) <span cla
                 return nil, err
         }</span>
 
-        <span class="cov0" title="0">return conn, nil</span>
+        <span class="cov8" title="1">return conn, nil</span>
 }
 
 // Retry logic for connecting to Kafka
-func RetryKafkaConnection(brokers []string, maxRetries int, retryInterval time.Duration) (sarama.SyncProducer, error) <span class="cov0" title="0">{
+func RetryKafkaConnection(brokers []string, maxRetries int, retryInterval time.Duration) (sarama.SyncProducer, error) <span class="cov8" title="1">{
         var producer sarama.SyncProducer
         var err error
 
-        for attempt := 1; attempt &lt;= maxRetries; attempt++ </span><span class="cov0" title="0">{
+        for attempt := 1; attempt &lt;= maxRetries; attempt++ </span><span class="cov8" title="1">{
                 log.Info().Msgf("Attempting to connect to Kafka. Attempt: %d", attempt)
                 producer, err = ConnectProducer(brokers)
-                if err == nil </span><span class="cov0" title="0">{
+                if err == nil </span><span class="cov8" title="1">{
                         return producer, nil // Successfully connected
                 }</span>
 
@@ -168,6 +174,22 @@ func RetryKafkaConnection(brokers []string, maxRetries int, retryInterval time.D
         }
 
         <span class="cov0" title="0">return nil, err</span> // Return error after max retries
+}
+
+func RetryKafkaConnectionMock(brokers []string, maxRetries int, retryInterval time.Duration, dialFunc func([]string) (sarama.SyncProducer, error)) (sarama.SyncProducer, error) <span class="cov0" title="0">{
+        var producer sarama.SyncProducer
+        var err error
+
+        // Try to connect with retry logic
+        for i := 0; i &lt; maxRetries; i++ </span><span class="cov0" title="0">{
+                producer, err = dialFunc(brokers)
+                if err == nil </span><span class="cov0" title="0">{
+                        return producer, nil
+                }</span>
+                <span class="cov0" title="0">time.Sleep(retryInterval)</span>
+        }
+
+        <span class="cov0" title="0">return nil, errors.New("failed to connect to Kafka after multiple retries")</span>
 }
 </pre>
 		
@@ -323,33 +345,48 @@ func main() <span class="cov0" title="0">{
         log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
         configuration := config.New()
 
-        // Try to connect with retries
+        // Set up Kafka connection
+        producer, err := setupKafka(configuration)
+
+        if err != nil </span><span class="cov0" title="0">{
+                os.Exit(1)
+        }</span>
+        // No need to close the producer as it does not have a Close method
+
+        // Initialize the services and controller
+        <span class="cov0" title="0">_, mainController := initializeServices(configuration, producer)
+
+        // Start the cron job
+        startCronJob(configuration, mainController)
+
+        select </span>{}
+}
+
+func setupKafka(configuration config.Config) (kafkaconfig.KafkaProducer, error) <span class="cov8" title="1">{
         brokersUrl := []string{configuration.Get("KAFKA_URL")}
-        maxRetries := 5                   // Number of retry attempts
-        retryInterval := 30 * time.Second // Start retry interval
+        maxRetries := 5
+        retryInterval := 30 * time.Second
+
         producer, err := config.RetryKafkaConnection(brokersUrl, maxRetries, retryInterval)
         if err != nil </span><span class="cov0" title="0">{
                 log.Error().Msg("Failed to connect to Kafka after multiple retries")
-                os.Exit(1)
+                return nil, err // Return the error instead of exiting
         }</span>
-        <span class="cov0" title="0">defer producer.Close()
-        log.Info().Msg("Kafka connected")
-        log.Info().Msg("Starting Cron Job")
 
-        // Wrap the sarama producer with SaramaProducer
-        kafkaProducer := kafkaconfig.NewSaramaProducer(producer)
+        <span class="cov8" title="1">log.Info().Msg("Kafka connected")
+        return kafkaconfig.NewSaramaProducer(producer), nil</span>
+}
 
-        // initialize repository
+func initializeServices(configuration config.Config, kafkaProducer kafkaconfig.KafkaProducer) (service.MainService, *controller.MainController) <span class="cov8" title="1">{
         mainRepository := repository.NewMainRepository()
-
-        // initialize service with kafka producer
         mainService := service.NewMainService(&amp;configuration, kafkaProducer, mainRepository)
-        // Initialize controller with Kafka producer
         mainController := controller.NewMainController(mainService)
+        return mainService, mainController
+}</span>
 
-        // Initialize cron schedulers
+func startCronJob(configuration config.Config, mainController *controller.MainController) <span class="cov8" title="1">{
         c := cron.New()
-        // Cron job
+
         c.AddFunc(configuration.Get("JOB_MAIN_EXECTIME"), func() </span><span class="cov0" title="0">{
                 log.Info().Msg("Exec Publish Message Main")
                 now := time.Now()
@@ -357,19 +394,13 @@ func main() <span class="cov0" title="0">{
                 fmt.Println(day)
                 hour, _, _ := now.Clock()
                 if day == time.Saturday || day == time.Sunday </span><span class="cov0" title="0">{
-                        log.Warn().Msg("Weekend, why you still working?")
-                }</span> else<span class="cov0" title="0"> {
-                        // execute every 5 minutes
-                        if hour &gt;= 8 &amp;&amp; hour &lt;= 17 </span><span class="cov0" title="0">{
-                                log.Info().Msg("Exec Publish Message Main")
-                                mainController.PublishMessageMain()
-                        }</span>
-                }
+                        log.Warn().Msg("Weekend, why are you still working?")
+                }</span> else<span class="cov0" title="0"> if hour &gt;= 8 &amp;&amp; hour &lt;= 17 </span><span class="cov0" title="0">{
+                        log.Info().Msg("Exec Publish Message Main")
+                        mainController.PublishMessageMain()
+                }</span>
         })
-        <span class="cov0" title="0">c.Start()
-
-        select </span>{}
-
+        <span class="cov8" title="1">c.Start()</span>
 }
 </pre>
 		
