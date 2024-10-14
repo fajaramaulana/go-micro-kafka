@@ -41,7 +41,69 @@ git  clone  https://github.com/fajaramaulana/go-micro-kafka.git  cd  go-micro-ka
 ```
 ├── go-micro-kafka-producer/
 
-│ └── ...
+│ └── config
+
+│ │ ├── config.go
+
+│ │ └── kafka.go
+
+│ └── exception
+
+│ │ ├── data_not_found_error.go
+
+│ │ ├── database_error.go
+
+│ │ ├── error_handler.go
+
+│ │ ├── error.go
+
+│ │ └── general_error.go
+
+│ └── mocks
+
+│ │ ├── mock_consumer_group_claim.go
+
+│ │ ├── mock_consumer_group_session.go
+
+│ │ └── mock_main_service.go
+
+│ └── model
+
+│ │ ├── request
+
+│ │ │ └── main_request.go
+
+│ │ └── response
+
+│ │ │ ├── main_response.go
+
+│ │ │ └── web_response.go
+
+│ └── repository
+
+│ │ ├── main_repository_impl.go
+
+│ │ ├── main_repository_test.go
+
+│ │ └── main_repository.go
+
+│ └── service
+
+│ │ ├── main_service_impl.go
+
+│ │ ├── main_service_test.go
+
+│ │ └── main_service.go
+
+│ ├── go.mod
+
+│ ├── go.sum
+
+│ ├── main.go
+
+│ ├── README.md
+
+│ └── .env
 
 ├── go-micro-kafka-consumer/
 
