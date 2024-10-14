@@ -3,6 +3,7 @@ module github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer
 go 1.23.0
 
 require (
+	bou.ke/monkey v1.0.2
 	github.com/IBM/sarama v1.43.3
 	github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer v0.0.0-20240925043146-54d56f79de34
 	github.com/gofiber/fiber/v2 v2.52.5

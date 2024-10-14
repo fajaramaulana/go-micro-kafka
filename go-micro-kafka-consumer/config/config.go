@@ -9,6 +9,7 @@ import (
 
 type Config interface {
 	Get(key string) string
+	Set(key, value string)
 }
 
 type configImpl struct {
@@ -16,6 +17,10 @@ type configImpl struct {
 
 func (config *configImpl) Get(key string) string {
 	return os.Getenv(key)
+}
+
+func (config *configImpl) Set(key, value string) {
+	os.Setenv(key, value)
 }
 
 func New(filenames ...string) Config {

@@ -26,35 +26,39 @@ type ConsumerClaimPbk struct {
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	log.Info().Msg("Starting Kafka consumer...")
-	// Load configuration
+
 	configuration := config.New()
-
-	// Kafka configuration
-	kafkaConfig := config.GetKafkaConfig("", "")
-	kafkaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest // Start from the earliest offset
-
-	// Create Kafka consumer group
-	consumerGroup, err := sarama.NewConsumerGroup([]string{configuration.Get("KAFKA_URL")}, configuration.Get("KAFKA_GROUP"), kafkaConfig)
+	consumerGroup, err := createConsumerGroup(configuration)
 	if err != nil {
 		log.Fatal().Msgf("Error creating Kafka consumer group: %v", err)
 	}
 	defer consumerGroup.Close()
 
-	// Set up repository and service
 	mainRepository := repository.NewMainRepository(&configuration)
 	mainService := service.NewMainService(mainRepository, &configuration)
 
-	// Set up signal handler
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
-	// Start consuming
+	startConsuming(consumerGroup, mainService, configuration)
+
+	log.Info().Msg("Kafka consumer waiting for messages...")
+	<-signals // Wait for signal to exit
+	log.Info().Msg("Shutting down Kafka consumer...")
+}
+
+func createConsumerGroup(configuration config.Config) (sarama.ConsumerGroup, error) {
+	kafkaConfig := config.GetKafkaConfig("", "")
+	kafkaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest // Start from the earliest offset
+
+	return sarama.NewConsumerGroup([]string{configuration.Get("KAFKA_URL")}, configuration.Get("KAFKA_GROUP"), kafkaConfig)
+}
+
+func startConsuming(consumerGroup sarama.ConsumerGroup, mainService service.MainService, configuration config.Config) {
 	consumer := &ConsumerClaimPbk{
 		mainService: mainService,
 		ready:       make(chan bool),
 	}
-
-	log.Info().Msg("Kafka consumer waiting for messages...")
 
 	go func() {
 		for {
@@ -64,9 +68,6 @@ func main() {
 			consumer.ready = make(chan bool) // Re-initialize for the next loop
 		}
 	}()
-
-	<-signals // Wait for signal to exit
-	log.Info().Msg("Shutting down Kafka consumer...")
 }
 
 func (consumer *ConsumerClaimPbk) Setup(sarama.ConsumerGroupSession) error {
@@ -93,9 +94,15 @@ func (consumer *ConsumerClaimPbk) ConsumeClaim(session sarama.ConsumerGroupSessi
 		location, err := time.LoadLocation("Asia/Jakarta")
 		if err != nil {
 			log.Error().Msgf("Error loading location: %v", err)
+			continue // Handle the error as necessary
 		}
 
-		log.Info().Msgf("Time: %v Total Data: %v", t.In(location), len(response.Data))
+		if location == nil {
+			log.Error().Msg("Location is nil")
+		} else {
+			log.Info().Msgf("Time: %v Total Data: %v", t.In(location), len(response.Data))
+		}
+
 		consumer.mainService.MainFuncService(response.Data)
 
 		// Commit the offset only after successful processing
