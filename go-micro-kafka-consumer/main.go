@@ -42,7 +42,7 @@ func main() {
 
 	// Set up repository and service
 	mainRepository := repository.NewMainRepository(&configuration)
-	mainService := service.NewMainService(&mainRepository, &configuration)
+	mainService := service.NewMainService(mainRepository, &configuration)
 
 	// Set up signal handler
 	signals := make(chan os.Signal, 1)

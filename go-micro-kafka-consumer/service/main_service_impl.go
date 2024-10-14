@@ -15,9 +15,9 @@ type mainServiceImpl struct {
 	Configuration  config.Config
 }
 
-func NewMainService(mainRepository *repository.MainRepository, configuration *config.Config) MainService {
+func NewMainService(mainRepository repository.MainRepository, configuration *config.Config) MainService {
 	return &mainServiceImpl{
-		MainRepository: *mainRepository,
+		MainRepository: mainRepository,
 		Configuration:  *configuration,
 	}
 }
@@ -30,14 +30,12 @@ func (m *mainServiceImpl) MainFuncService(params []request.DataDetail) *fiber.Ma
 	for _, param := range params {
 		// call repository
 		paramsId := request.ParamsId{ID: param.Uuid}
-		result, err := m.MainRepository.MainFuncRepository(&paramsId)
+		_, err := m.MainRepository.MainFuncRepository(&paramsId)
 
 		if err != nil {
 			log.Error().Msg("Error MainFuncRepository, " + err.Error())
 			continue
 		}
-
-		fmt.Println("Result: ", result)
 	}
 
 	return nil

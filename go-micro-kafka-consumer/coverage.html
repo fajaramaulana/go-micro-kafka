@@ -323,7 +323,7 @@ func main() <span class="cov0" title="0">{
 
         // Set up repository and service
         mainRepository := repository.NewMainRepository(&amp;configuration)
-        mainService := service.NewMainService(&amp;mainRepository, &amp;configuration)
+        mainService := service.NewMainService(mainRepository, &amp;configuration)
 
         // Set up signal handler
         signals := make(chan os.Signal, 1)
@@ -475,10 +475,13 @@ func (m *mainRepositoryImpl) MainFuncRepository(params *request.ParamsId) (strin
 		<pre class="file" id="file12" style="display: none">package service
 
 import (
+        "fmt"
+
         "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/config"
         "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/model/request"
         "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/repository"
         "github.com/gofiber/fiber/v2"
+        "github.com/rs/zerolog/log"
 )
 
 type mainServiceImpl struct {
@@ -486,16 +489,31 @@ type mainServiceImpl struct {
         Configuration  config.Config
 }
 
-func NewMainService(mainRepository *repository.MainRepository, configuration *config.Config) MainService <span class="cov8" title="1">{
+func NewMainService(mainRepository repository.MainRepository, configuration *config.Config) MainService <span class="cov8" title="1">{
         return &amp;mainServiceImpl{
-                MainRepository: *mainRepository,
+                MainRepository: mainRepository,
                 Configuration:  *configuration,
         }
 }</span>
 
 func (m *mainServiceImpl) MainFuncService(params []request.DataDetail) *fiber.Map <span class="cov8" title="1">{
-        return nil
-}</span>
+        // todo implement the business logic here
+        fmt.Println("MainFuncService")
+
+        // loop params
+        for _, param := range params </span><span class="cov8" title="1">{
+                // call repository
+                paramsId := request.ParamsId{ID: param.Uuid}
+                _, err := m.MainRepository.MainFuncRepository(&amp;paramsId)
+
+                if err != nil </span><span class="cov8" title="1">{
+                        log.Error().Msg("Error MainFuncRepository, " + err.Error())
+                        continue</span>
+                }
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
 </pre>
 		
 		</div>
