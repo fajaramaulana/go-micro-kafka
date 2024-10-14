@@ -38,7 +38,7 @@ git  clone  https://github.com/fajaramaulana/go-micro-kafka.git  cd  go-micro-ka
 ```
 
 ### Project Structure
-
+```
 ├── go-micro-kafka-producer/
 
 │ └── ...
@@ -124,7 +124,7 @@ git  clone  https://github.com/fajaramaulana/go-micro-kafka.git  cd  go-micro-ka
 └── kafka
 
 └── docker-compose.yml
-
+```
   
 
 ### Configuration
