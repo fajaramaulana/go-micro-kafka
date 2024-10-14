@@ -1,8 +1,9 @@
-package main
+package main_test
 
 import (
 	"fmt"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/config"
@@ -11,26 +12,46 @@ import (
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/repository"
 	"github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/service"
 	"github.com/robfig/cron"
-
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	configuration := config.New()
+// MockKafkaProducer is a mock implementation of KafkaProducer
+type MockKafkaProducer struct {
+	mock.Mock
+}
 
-	// Set up Kafka connection
+func (m *MockKafkaProducer) SendMessage(topic string, message []byte) error {
+	args := m.Called(topic, message)
+	return args.Error(0)
+}
+
+func TestSetupKafka(t *testing.T) {
+	configuration := config.New() // Use a mock configuration if possible
 	producer := setupKafka(configuration)
-	// No need to close the producer as it does not have a Close method
 
-	// Initialize the services and controller
-	mainController := initializeServices(configuration, producer)
+	assert.NotNil(t, producer)
+}
 
-	// Start the cron job
+func TestInitializeServices(t *testing.T) {
+	configuration := config.New()
+	mockProducer := new(MockKafkaProducer)
+
+	mainService, mainController := initializeServices(configuration, mockProducer)
+	assert.NotNil(t, mainService)
+	assert.NotNil(t, mainController)
+}
+
+func TestStartCronJob(t *testing.T) {
+	configuration := config.New()
+	mockProducer := new(MockKafkaProducer)
+	mainRepository := repository.NewMainRepository()
+	mainService := service.NewMainService(&configuration, mockProducer, mainRepository)
+	mainController := controller.NewMainController(mainService)
+
+	// This will ensure that the cron job is added without running indefinitely
 	startCronJob(configuration, mainController)
-
-	select {}
 }
 
 func setupKafka(configuration config.Config) kafkaconfig.KafkaProducer {
@@ -48,11 +69,11 @@ func setupKafka(configuration config.Config) kafkaconfig.KafkaProducer {
 	return kafkaconfig.NewSaramaProducer(producer)
 }
 
-func initializeServices(configuration config.Config, kafkaProducer kafkaconfig.KafkaProducer) *controller.MainController {
+func initializeServices(configuration config.Config, kafkaProducer kafkaconfig.KafkaProducer) (service.MainService, *controller.MainController) {
 	mainRepository := repository.NewMainRepository()
 	mainService := service.NewMainService(&configuration, kafkaProducer, mainRepository)
 	mainController := controller.NewMainController(mainService)
-	return mainController
+	return mainService, mainController
 }
 
 func startCronJob(configuration config.Config, mainController *controller.MainController) {
