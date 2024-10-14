@@ -21,11 +21,15 @@ func main() {
 	configuration := config.New()
 
 	// Set up Kafka connection
-	producer := setupKafka(configuration)
+	producer, err := setupKafka(configuration)
+
+	if err != nil {
+		os.Exit(1)
+	}
 	// No need to close the producer as it does not have a Close method
 
 	// Initialize the services and controller
-	mainController := initializeServices(configuration, producer)
+	_, mainController := initializeServices(configuration, producer)
 
 	// Start the cron job
 	startCronJob(configuration, mainController)
@@ -33,7 +37,7 @@ func main() {
 	select {}
 }
 
-func setupKafka(configuration config.Config) kafkaconfig.KafkaProducer {
+func setupKafka(configuration config.Config) (kafkaconfig.KafkaProducer, error) {
 	brokersUrl := []string{configuration.Get("KAFKA_URL")}
 	maxRetries := 5
 	retryInterval := 30 * time.Second
@@ -41,18 +45,18 @@ func setupKafka(configuration config.Config) kafkaconfig.KafkaProducer {
 	producer, err := config.RetryKafkaConnection(brokersUrl, maxRetries, retryInterval)
 	if err != nil {
 		log.Error().Msg("Failed to connect to Kafka after multiple retries")
-		os.Exit(1)
+		return nil, err // Return the error instead of exiting
 	}
 
 	log.Info().Msg("Kafka connected")
-	return kafkaconfig.NewSaramaProducer(producer)
+	return kafkaconfig.NewSaramaProducer(producer), nil
 }
 
-func initializeServices(configuration config.Config, kafkaProducer kafkaconfig.KafkaProducer) *controller.MainController {
+func initializeServices(configuration config.Config, kafkaProducer kafkaconfig.KafkaProducer) (service.MainService, *controller.MainController) {
 	mainRepository := repository.NewMainRepository()
 	mainService := service.NewMainService(&configuration, kafkaProducer, mainRepository)
 	mainController := controller.NewMainController(mainService)
-	return mainController
+	return mainService, mainController
 }
 
 func startCronJob(configuration config.Config, mainController *controller.MainController) {
