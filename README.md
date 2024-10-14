@@ -188,19 +188,6 @@ git  clone  https://github.com/fajaramaulana/go-micro-kafka.git  cd  go-micro-ka
 └── docker-compose.yml
 ```
   
-
-### Configuration
-
-  
-
-Create a `.env` file in the root directory with the following content:
-
-```dotenv
-
-KAFKA_BROKER=localhost:9092
-
-```
-
 ### Usage
 
   
