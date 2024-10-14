@@ -1,0 +1,530 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>config: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/config/config.go (75.0%)</option>
+				
+				<option value="file1">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/config/kafka.go (0.0%)</option>
+				
+				<option value="file2">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/exception/data_not_found_error.go (0.0%)</option>
+				
+				<option value="file3">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/exception/database_error.go (0.0%)</option>
+				
+				<option value="file4">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/exception/error.go (50.0%)</option>
+				
+				<option value="file5">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/exception/error_handler.go (0.0%)</option>
+				
+				<option value="file6">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/exception/general_error.go (0.0%)</option>
+				
+				<option value="file7">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/main.go (30.0%)</option>
+				
+				<option value="file8">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/mocks/mock_consumer_group_claim.go (100.0%)</option>
+				
+				<option value="file9">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/mocks/mock_consumer_group_session.go (100.0%)</option>
+				
+				<option value="file10">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/mocks/mock_main_service.go (100.0%)</option>
+				
+				<option value="file11">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/repository/main_repository_impl.go (100.0%)</option>
+				
+				<option value="file12">github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/service/main_service_impl.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package config
+
+import (
+        "os"
+
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/exception"
+        "github.com/joho/godotenv"
+)
+
+type Config interface {
+        Get(key string) string
+}
+
+type configImpl struct {
+}
+
+func (config *configImpl) Get(key string) string <span class="cov0" title="0">{
+        return os.Getenv(key)
+}</span>
+
+func New(filenames ...string) Config <span class="cov8" title="1">{
+        err := godotenv.Load(filenames...)
+        exception.PanicIfNeeded(err)
+        return &amp;configImpl{}
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package config
+
+import (
+        "errors"
+        "time"
+
+        "github.com/IBM/sarama"
+        "github.com/rs/zerolog/log"
+)
+
+func ConnectProducer(brokersUrl []string) (sarama.SyncProducer, error) <span class="cov0" title="0">{
+
+        config := sarama.NewConfig()
+        config.Producer.Return.Successes = true
+        config.Producer.RequiredAcks = sarama.WaitForAll
+        config.Producer.Retry.Max = 5
+
+        conn, err := sarama.NewSyncProducer(brokersUrl, config)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return conn, nil</span>
+}
+
+// Retry logic for connecting to Kafka
+func RetryKafkaConnection(brokers []string, maxRetries int, retryInterval time.Duration) (sarama.SyncProducer, error) <span class="cov0" title="0">{
+        var producer sarama.SyncProducer
+        var err error
+
+        for attempt := 1; attempt &lt;= maxRetries; attempt++ </span><span class="cov0" title="0">{
+                log.Info().Msgf("Attempting to connect to Kafka. Attempt: %d", attempt)
+                producer, err = ConnectProducer(brokers)
+                if err == nil </span><span class="cov0" title="0">{
+                        return producer, nil // Successfully connected
+                }</span>
+
+                // Log the error and wait before retrying
+                <span class="cov0" title="0">log.Error().Msgf("Failed to connect to Kafka: %v. Retrying in %s...", err, retryInterval)
+                time.Sleep(retryInterval)
+                // Exponential backoff: Increase retry interval for each attempt
+                retryInterval *= 2</span>
+        }
+
+        <span class="cov0" title="0">return nil, err</span> // Return error after max retries
+}
+
+func RetryKafkaConnectionMock(brokers []string, maxRetries int, retryInterval time.Duration, dialFunc func([]string) (sarama.SyncProducer, error)) (sarama.SyncProducer, error) <span class="cov0" title="0">{
+        var producer sarama.SyncProducer
+        var err error
+
+        // Try to connect with retry logic
+        for i := 0; i &lt; maxRetries; i++ </span><span class="cov0" title="0">{
+                producer, err = dialFunc(brokers)
+                if err == nil </span><span class="cov0" title="0">{
+                        return producer, nil
+                }</span>
+                <span class="cov0" title="0">time.Sleep(retryInterval)</span>
+        }
+
+        <span class="cov0" title="0">return nil, errors.New("failed to connect to Kafka after multiple retries")</span>
+}
+
+func GetKafkaConfig(username, password string) *sarama.Config <span class="cov0" title="0">{
+        kafkaConfig := sarama.NewConfig()
+        kafkaConfig.Producer.Return.Successes = true
+        kafkaConfig.Net.WriteTimeout = 5 * time.Second
+        kafkaConfig.Producer.Retry.Max = 0
+        if username != "" </span><span class="cov0" title="0">{
+                kafkaConfig.Net.SASL.Enable = true
+                kafkaConfig.Net.SASL.User = username
+                kafkaConfig.Net.SASL.Password = password
+        }</span>
+        <span class="cov0" title="0">return kafkaConfig</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package exception
+
+type DataNotFoundError struct {
+        Message string
+}
+
+func (dataNotFoundError DataNotFoundError) Error() string <span class="cov0" title="0">{
+        return dataNotFoundError.Message
+}</span>
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package exception
+
+type DatabaseError struct {
+        Message string
+}
+
+func (databaseError DatabaseError) Error() string <span class="cov0" title="0">{
+        return databaseError.Message
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package exception
+
+func PanicIfNeeded(err interface{}) <span class="cov8" title="1">{
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package exception
+
+import (
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-producer/model/response"
+        "github.com/gofiber/fiber/v2"
+)
+
+func ErrorHandler(ctx *fiber.Ctx, err error) error <span class="cov0" title="0">{
+
+        _, databaseError := err.(DatabaseError)
+        if databaseError </span><span class="cov0" title="0">{
+                return ctx.Status(500).JSON(response.WebResponse{
+                        StatusCode: 500,
+                        Message:    "Terjadi kesalahan, silahkan ulangi beberapa saat lagi, code=[001]",
+                })
+        }</span>
+
+        <span class="cov0" title="0">_, dataNotFoundError := err.(DataNotFoundError)
+        if dataNotFoundError </span><span class="cov0" title="0">{
+                return ctx.Status(404).JSON(response.WebResponse{
+                        StatusCode: 404,
+                        Message:    err.Error(),
+                })
+        }</span>
+
+        <span class="cov0" title="0">_, generalError := err.(GeneralError)
+        if generalError </span><span class="cov0" title="0">{
+                return ctx.Status(400).JSON(response.WebResponse{
+                        StatusCode: 400,
+                        Message:    err.Error(),
+                })
+        }</span>
+
+        <span class="cov0" title="0">return ctx.Status(400).JSON(response.WebResponse{
+                StatusCode: 400,
+                Message:    "Terjadi kesalahan, silahkan ulangi beberapa saat lagi, code=[002]",
+        })</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package exception
+
+type GeneralError struct {
+        Message string
+}
+
+func (generalError GeneralError) Error() string <span class="cov0" title="0">{
+        return generalError.Message
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package main
+
+import (
+        "context"
+        "encoding/json"
+        "os"
+        "os/signal"
+        "syscall"
+        "time"
+
+        "github.com/IBM/sarama"
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/config"
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/model/request"
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/repository"
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/service"
+
+        "github.com/rs/zerolog"
+        "github.com/rs/zerolog/log"
+)
+
+type ConsumerClaimPbk struct {
+        mainService service.MainService
+        ready       chan bool
+}
+
+func main() <span class="cov0" title="0">{
+        log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+        log.Info().Msg("Starting Kafka consumer...")
+        // Load configuration
+        configuration := config.New()
+
+        // Kafka configuration
+        kafkaConfig := config.GetKafkaConfig("", "")
+        kafkaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest // Start from the earliest offset
+
+        // Create Kafka consumer group
+        consumerGroup, err := sarama.NewConsumerGroup([]string{configuration.Get("KAFKA_URL")}, configuration.Get("KAFKA_GROUP"), kafkaConfig)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal().Msgf("Error creating Kafka consumer group: %v", err)
+        }</span>
+        <span class="cov0" title="0">defer consumerGroup.Close()
+
+        // Set up repository and service
+        mainRepository := repository.NewMainRepository(&amp;configuration)
+        mainService := service.NewMainService(&amp;mainRepository, &amp;configuration)
+
+        // Set up signal handler
+        signals := make(chan os.Signal, 1)
+        signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+
+        // Start consuming
+        consumer := &amp;ConsumerClaimPbk{
+                mainService: mainService,
+                ready:       make(chan bool),
+        }
+
+        log.Info().Msg("Kafka consumer waiting for messages...")
+
+        go func() </span><span class="cov0" title="0">{
+                for </span><span class="cov0" title="0">{
+                        if err := consumerGroup.Consume(context.Background(), []string{configuration.Get("KAFKA_TOPIC_MAIN")}, consumer); err != nil </span><span class="cov0" title="0">{
+                                log.Error().Msgf("Error from consumer: %v", err)
+                        }</span>
+                        <span class="cov0" title="0">consumer.ready = make(chan bool)</span> // Re-initialize for the next loop
+                }
+        }()
+
+        <span class="cov0" title="0">&lt;-signals // Wait for signal to exit
+        log.Info().Msg("Shutting down Kafka consumer...")</span>
+}
+
+func (consumer *ConsumerClaimPbk) Setup(sarama.ConsumerGroupSession) error <span class="cov0" title="0">{
+        close(consumer.ready)
+        return nil
+}</span>
+
+func (consumer *ConsumerClaimPbk) Cleanup(sarama.ConsumerGroupSession) error <span class="cov0" title="0">{
+        return nil
+}</span>
+
+func (consumer *ConsumerClaimPbk) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error <span class="cov8" title="1">{
+        for msg := range claim.Messages() </span><span class="cov8" title="1">{
+                log.Info().Msgf("New Message from kafka, message: %v", string(msg.Value))
+
+                var response request.DataFromKafka
+                err := json.Unmarshal(msg.Value, &amp;response)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Error().Msgf("Error unmarshalling message: %v", err)
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">t := time.Now()
+                location, err := time.LoadLocation("Asia/Jakarta")
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Error().Msgf("Error loading location: %v", err)
+                }</span>
+
+                <span class="cov8" title="1">log.Info().Msgf("Time: %v Total Data: %v", t.In(location), len(response.Data))
+                consumer.mainService.MainFuncService(response.Data)
+
+                // Commit the offset only after successful processing
+                session.MarkMessage(msg, "")</span>
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package mocks
+
+import (
+        "github.com/IBM/sarama"
+        "github.com/stretchr/testify/mock"
+)
+
+// MockConsumerGroupClaim is a mock for sarama.ConsumerGroupClaim
+type MockConsumerGroupClaim struct {
+        mock.Mock
+        sarama.ConsumerGroupClaim
+}
+
+// Messages returns the mocked message channel
+func (m *MockConsumerGroupClaim) Messages() &lt;-chan *sarama.ConsumerMessage <span class="cov8" title="1">{
+        args := m.Called()
+        return args.Get(0).(&lt;-chan *sarama.ConsumerMessage)
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package mocks
+
+import (
+        "github.com/IBM/sarama"
+        "github.com/stretchr/testify/mock"
+)
+
+// MockConsumerGroupSession is a mock for sarama.ConsumerGroupSession
+type MockConsumerGroupSession struct {
+        mock.Mock
+        sarama.ConsumerGroupSession
+}
+
+// MarkMessage is a mock method to track message acknowledgment.
+func (m *MockConsumerGroupSession) MarkMessage(msg *sarama.ConsumerMessage, metadata string) <span class="cov8" title="1">{
+        m.Called(msg, metadata)
+}</span>
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package mocks
+
+import (
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/model/request"
+        "github.com/gofiber/fiber/v2"
+        "github.com/stretchr/testify/mock"
+)
+
+// MockMainService is a mock for the MainService interface
+type MockMainService struct {
+        mock.Mock
+}
+
+// MainFuncService is a mock method to simulate the processing of data
+func (m *MockMainService) MainFuncService(data []request.DataDetail) *fiber.Map <span class="cov8" title="1">{
+        m.Called(data)
+        return nil
+}</span>
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package repository
+
+import (
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/config"
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/model/request"
+        "github.com/rs/zerolog/log"
+)
+
+type mainRepositoryImpl struct {
+        Configuration config.Config
+}
+
+func NewMainRepository(configuration *config.Config) MainRepository <span class="cov8" title="1">{
+        return &amp;mainRepositoryImpl{
+                Configuration: *configuration,
+        }
+}</span>
+
+func (m *mainRepositoryImpl) MainFuncRepository(params *request.ParamsId) (string, error) <span class="cov8" title="1">{
+        log.Info().Msg("MainFuncRepository")
+        log.Info().Msg("Params ID Before: " + params.ID)
+        params.ID = "123"
+        log.Info().Msg("Params ID After: " + params.ID)
+        return params.ID, nil
+}</span>
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package service
+
+import (
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/config"
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/model/request"
+        "github.com/fajaramaulana/go-micro-kafka/go-micro-kafka-consumer/repository"
+        "github.com/gofiber/fiber/v2"
+)
+
+type mainServiceImpl struct {
+        MainRepository repository.MainRepository
+        Configuration  config.Config
+}
+
+func NewMainService(mainRepository *repository.MainRepository, configuration *config.Config) MainService <span class="cov8" title="1">{
+        return &amp;mainServiceImpl{
+                MainRepository: *mainRepository,
+                Configuration:  *configuration,
+        }
+}</span>
+
+func (m *mainServiceImpl) MainFuncService(params []request.DataDetail) *fiber.Map <span class="cov8" title="1">{
+        return nil
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

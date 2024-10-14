@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -24,17 +24,41 @@ func ConnectProducer(brokersUrl []string) (sarama.SyncProducer, error) {
 }
 
 // Retry logic for connecting to Kafka
-func RetryKafkaConnection(brokersUrl []string, maxRetries int, retryInterval time.Duration) (producer sarama.SyncProducer, err error) {
+func RetryKafkaConnection(brokers []string, maxRetries int, retryInterval time.Duration) (sarama.SyncProducer, error) {
+	var producer sarama.SyncProducer
+	var err error
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		log.Info().Msgf("Attempting to connect to Kafka. Attempt: %d", attempt)
+		producer, err = ConnectProducer(brokers)
+		if err == nil {
+			return producer, nil // Successfully connected
+		}
+
+		// Log the error and wait before retrying
+		log.Error().Msgf("Failed to connect to Kafka: %v. Retrying in %s...", err, retryInterval)
+		time.Sleep(retryInterval)
+		// Exponential backoff: Increase retry interval for each attempt
+		retryInterval *= 2
+	}
+
+	return nil, err // Return error after max retries
+}
+
+func RetryKafkaConnectionMock(brokers []string, maxRetries int, retryInterval time.Duration, dialFunc func([]string) (sarama.SyncProducer, error)) (sarama.SyncProducer, error) {
+	var producer sarama.SyncProducer
+	var err error
+
+	// Try to connect with retry logic
 	for i := 0; i < maxRetries; i++ {
-		producer, err = ConnectProducer(brokersUrl)
+		producer, err = dialFunc(brokers)
 		if err == nil {
 			return producer, nil
 		}
-		log.Warn().Msgf("Kafka connection failed. Retry %d/%d", i+1, maxRetries)
-		time.Sleep(retryInterval) // Wait before retrying
+		time.Sleep(retryInterval)
 	}
 
-	return nil, fmt.Errorf("failed to connect to Kafka after %d retries: %v", maxRetries, err)
+	return nil, errors.New("failed to connect to Kafka after multiple retries")
 }
 
 func GetKafkaConfig(username, password string) *sarama.Config {
